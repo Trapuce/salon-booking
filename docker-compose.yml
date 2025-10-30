@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  salon-booking:
+    build: .
+    container_name: salon-booking
+    restart: unless-stopped
+    ports:
+      - "8087:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/data/prod.db
+      - ADMIN_PASSWORD=salon2024
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - NEXT_PUBLIC_APP_URL=https://barber-time.trapuce.tech
+    volumes:
+      - salon-data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - salon-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/appointments',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  salon-data:
+
+networks:
+  salon-network:
+    driver: bridge

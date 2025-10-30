@@ -1,0 +1,36 @@
+// Prisma schema for the hair salon appointment booking system
+// Uses SQLite for simplicity - can be changed to PostgreSQL for production
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Appointment model - stores all booking information
+model Appointment {
+  id        String   @id @default(cuid())
+  name      String   // Client's name
+  email     String   // Client's email
+  phone     String?  // Client's phone (optional)
+  date      DateTime // Appointment date and time
+  status    String   @default("pending") // pending, completed, cancelled
+  createdAt DateTime @default(now())
+  
+  @@index([date])
+  @@index([status])
+}
+
+// WorkingHours model - stores salon schedule
+model WorkingHours {
+  id        String  @id @default(cuid())
+  dayOfWeek Int     // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  isOpen    Boolean @default(true)
+  startTime String  // Format: "09:00"
+  endTime   String  // Format: "18:00"
+  
+  @@unique([dayOfWeek])
+}
