@@ -29,6 +29,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Créer les dossiers nécessaires
+RUN mkdir -p /app/data /app/node_modules/.prisma /app/node_modules/@prisma
+
 # Copier les fichiers nécessaires
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
@@ -36,8 +39,11 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/lib ./lib
 
-# Créer le dossier pour la base de données
-RUN mkdir -p /app/data
+# Copier Prisma Client avec tous les fichiers binaires nécessaires (y compris le Query Engine)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma/client ./node_modules/.prisma/client
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
+
+# Définir les permissions
 RUN chown -R nextjs:nodejs /app
 
 USER nextjs

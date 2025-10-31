@@ -42,16 +42,20 @@ nano .env
 ### 3. Builder et lancer l'application
 
 ```bash
-cd /opt/salon-booking
+cd /infra-traefik/apps/salon-booking
 
-# Builder l'image Docker
-docker compose build
+# Builder l'image Docker (IMPORTANT: rebuild complet pour Prisma)
+docker compose build --no-cache
 
 # Lancer le conteneur
 docker compose up -d
 
 # Initialiser la base de données (première fois seulement)
-docker compose exec salon-booking npx prisma db push
+# Après le rebuild avec les corrections Prisma, utilisez :
+docker compose exec salon-booking node node_modules/.bin/prisma db push --skip-generate
+
+# OU si le conteneur a déjà la DB en sync (comme indiqué dans votre sortie),
+# vous pouvez ignorer cette étape - la base est déjà initialisée !
 ```
 
 ### 4. Vérification
