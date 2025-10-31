@@ -1,219 +1,169 @@
-# Guide de Déploiement VPS - Barber Time
+# Guide de Déploiement VPS avec Traefik
 
-## 🚀 Déploiement sur barber-time.trapuce.tech
+## Configuration
 
-### Prérequis VPS
+Votre application est maintenant configurée pour utiliser Traefik qui gère déjà les ports 80/443 sur votre VPS.
 
-1. **Serveur Ubuntu 20.04+** ou **Debian 11+**
-2. **Docker** et **Docker Compose** installés
-3. **Git** installé
-4. **Ports ouverts** : 80, 443, 22
-5. **Domaine** `barber-time.trapuce.tech` pointant vers votre VPS
+## Étapes de Déploiement
 
-### Installation des Prérequis
+### 1. Sur votre machine locale
 
 ```bash
-# Mise à jour du système
-sudo apt update && sudo apt upgrade -y
-
-# Installation de Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
-
-# Installation de Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-
-# Installation de Git
-sudo apt install -y git
-
-# Redémarrage pour appliquer les changements
-sudo reboot
+# Assurez-vous que le code est prêt
+git add .
+git commit -m "Configure Traefik integration"
+git push
 ```
 
-### Déploiement de l'Application
+### 2. Sur votre VPS
 
-1. **Cloner le projet**
 ```bash
-cd /opt
-sudo git clone https://github.com/votre-username/salon-booking.git barber-time
-sudo chown -R $USER:$USER barber-time
-cd barber-time
-```
+# Créer le dossier pour l'application
+mkdir -p /opt/salon-booking
+cd /opt/salon-booking
 
-2. **Configurer les variables d'environnement**
-```bash
-cp .env.production.example .env.production
-nano .env.production
-```
+# Cloner ou copier les fichiers du projet
+git clone git@github.com:Trapuce/salon-booking.git .
+# OU si vous copiez via scp depuis votre machine locale:
+# scp -r salon-booking/* user@vps:/opt/salon-booking
 
-**Variables importantes à configurer :**
-```env
-# Base de données PostgreSQL
-DATABASE_URL="postgresql://barber_user:VOTRE_MOT_DE_PASSE_SECURISE@postgres:5432/barber_time"
-
-# Mot de passe admin
-ADMIN_PASSWORD="VOTRE_MOT_DE_PASSE_ADMIN_SECURISE"
-
-# API Resend (obtenez votre clé sur resend.com)
+# Créer le fichier .env
+cat > .env << 'EOF'
+DATABASE_URL="file:/app/data/prod.db"
+ADMIN_PASSWORD="votre_mot_de_passe_securise"
 RESEND_API_KEY="re_xxxxxxxxxx"
-
-# URL de l'application
 NEXT_PUBLIC_APP_URL="https://barber-time.trapuce.tech"
+EOF
 
-# Configuration PostgreSQL
-POSTGRES_PASSWORD="VOTRE_MOT_DE_PASSE_POSTGRES_SECURISE"
+# Éditer le .env avec vos vraies valeurs
+nano .env
 ```
 
-3. **Déployer avec Docker**
-```bash
-# Rendre les scripts exécutables
-chmod +x scripts/*.sh
-
-# Déployer l'application
-./scripts/deploy-vps.sh
-```
-
-### Configuration SSL (Let's Encrypt)
+### 3. Builder et lancer l'application
 
 ```bash
-# Configurer SSL automatiquement
-./scripts/setup-ssl.sh
+cd /opt/salon-booking
+
+# Builder l'image Docker
+docker compose build
+
+# Lancer le conteneur
+docker compose up -d
+
+# Initialiser la base de données (première fois seulement)
+docker compose exec salon-booking npx prisma db push
 ```
 
-### Vérification du Déploiement
+### 4. Vérification
 
-1. **Vérifier les conteneurs**
 ```bash
-docker-compose ps
+# Vérifier que le conteneur tourne
+docker ps | grep salon-booking
+
+# Vérifier les logs
+docker logs -f salon-booking
+
+# Tester l'API
+curl https://barber-time.trapuce.tech/api/appointments
 ```
 
-2. **Vérifier les logs**
+### 5. Accès
+
+- **Application** : https://barber-time.trapuce.tech
+- **Interface Admin** : https://barber-time.trapuce.tech/admin
+- **Page QR Code** : https://barber-time.trapuce.tech/admin/qr-code
+
+## Comment ça fonctionne
+
+1. Traefik écoute sur les ports 80/443 (déjà configuré dans `infra-traefik`)
+2. Votre application est sur le réseau Docker `web` (même réseau que Traefik)
+3. Traefik détecte automatiquement les labels du conteneur
+4. HTTPS est configuré automatiquement avec Let's Encrypt via Traefik
+5. Le domaine `barber-time.trapuce.tech` pointe vers votre conteneur
+
+## Mise à jour
+
+Pour mettre à jour l'application après des modifications :
+
 ```bash
-docker-compose logs -f app
+cd /opt/salon-booking
+
+# Récupérer les dernières modifications
+git pull
+
+# Rebuilder et redémarrer
+docker compose build
+docker compose up -d
 ```
 
-3. **Tester l'application**
-- Ouvrir https://barber-time.trapuce.tech
-- Tester la réservation
-- Tester l'interface admin
+## Sauvegardes
 
-### Gestion de l'Application
+La base de données est stockée dans le volume Docker `salon-data` :
 
-#### Commandes Utiles
+```bash
+# Sauvegarder la base de données
+docker run --rm -v salon-booking_salon-data:/data -v $(pwd):/backup alpine sh -c 'cp /data/prod.db /backup/prod-$(date +%F).db'
+
+# Restaurer la base de données
+docker run --rm -v salon-booking_salon-data:/data -v $(pwd):/backup alpine sh -c 'cp /backup/prod-YYYY-MM-DD.db /data/prod.db'
+```
+
+## Dépannage
+
+### Le conteneur ne démarre pas
 
 ```bash
 # Voir les logs
-docker-compose logs -f
+docker logs salon-booking
 
-# Redémarrer l'application
-docker-compose restart
-
-# Arrêter l'application
-docker-compose down
-
-# Mettre à jour l'application
-git pull
-docker-compose build
-docker-compose up -d
-
-# Sauvegarder la base de données
-docker-compose exec postgres pg_dump -U barber_user barber_time > backup.sql
-
-# Restaurer la base de données
-docker-compose exec -T postgres psql -U barber_user barber_time < backup.sql
+# Redémarrer
+docker compose restart
 ```
 
-#### Surveillance
+### Traefik ne détecte pas le conteneur
 
 ```bash
-# Vérifier l'utilisation des ressources
-docker stats
+# Vérifier que le réseau web existe
+docker network ls | grep web
 
-# Vérifier l'espace disque
-df -h
-
-# Vérifier les logs système
-journalctl -u docker
+# Si le réseau n'existe pas, le créer
+docker network create web
 ```
 
-### Configuration du Domaine
+### Problème de certificat SSL
 
-1. **DNS** : Pointez `barber-time.trapuce.tech` vers l'IP de votre VPS
-2. **Firewall** : Ouvrez les ports 80 et 443
-3. **SSL** : Le script configure automatiquement Let's Encrypt
-
-### Sécurité
-
-1. **Changer les mots de passe par défaut**
-2. **Configurer un firewall** (UFW recommandé)
-3. **Mettre à jour régulièrement** le système
-4. **Sauvegarder** la base de données régulièrement
-
-### Monitoring
+Traefik devrait obtenir automatiquement le certificat. Vérifiez les logs de Traefik :
 
 ```bash
-# Installer un moniteur simple
-sudo apt install -y htop
-
-# Surveiller les logs en temps réel
-docker-compose logs -f --tail=100
+docker logs traefik
 ```
 
-### Dépannage
+### Accès à l'application
 
-#### Problèmes Courants
+Si l'application n'est pas accessible :
 
-1. **Application ne démarre pas**
-```bash
-docker-compose logs app
-```
+1. Vérifier que le DNS pointe vers votre VPS :
+   ```bash
+   dig barber-time.trapuce.tech
+   ```
 
-2. **Base de données inaccessible**
-```bash
-docker-compose logs postgres
-```
+2. Vérifier que Traefik voit le conteneur :
+   - Accéder au dashboard Traefik : http://votre-vps-ip:8080
+   - Vérifier que `salon-booking` apparaît dans les routes
 
-3. **SSL ne fonctionne pas**
-```bash
-docker-compose logs nginx
-```
+3. Vérifier les logs Traefik pour les erreurs :
+   ```bash
+   docker logs traefik | grep salon-booking
+   ```
 
-4. **Port déjà utilisé**
-```bash
-sudo netstat -tulpn | grep :80
-sudo netstat -tulpn | grep :443
-```
+## Configuration Traefik
 
-### Sauvegarde
+Votre application utilise ces labels Traefik :
 
-```bash
-# Script de sauvegarde automatique
-#!/bin/bash
-DATE=$(date +%Y%m%d_%H%M%S)
-docker-compose exec postgres pg_dump -U barber_user barber_time > /opt/backups/barber_time_$DATE.sql
-find /opt/backups -name "*.sql" -mtime +7 -delete
-```
+- `traefik.enable=true` : Active Traefik pour ce conteneur
+- `traefik.http.routers.salon-booking.rule=Host(...)` : Règle de routage
+- `traefik.http.routers.salon-booking.entrypoints=websecure` : Utilise HTTPS
+- `traefik.http.routers.salon-booking.tls.certresolver=myresolver` : Certificat Let's Encrypt
+- `traefik.http.services.salon-booking.loadbalancer.server.port=3000` : Port interne du conteneur
 
-### Mise à Jour
-
-```bash
-# Mise à jour complète
-git pull
-docker-compose build --no-cache
-docker-compose down
-docker-compose up -d
-```
-
-## 🎉 Félicitations !
-
-Votre application Barber Time est maintenant déployée sur https://barber-time.trapuce.tech !
-
-### Prochaines Étapes
-
-1. ✅ **Tester** toutes les fonctionnalités
-2. ✅ **Configurer** Resend pour les emails
-3. ✅ **Personnaliser** le design si nécessaire
-4. ✅ **Configurer** les sauvegardes automatiques
-5. ✅ **Surveiller** les performances
+Ces labels sont déjà configurés dans `docker-compose.yml`, vous n'avez rien à modifier.

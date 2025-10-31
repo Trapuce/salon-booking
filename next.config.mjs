@@ -8,9 +8,6 @@ const nextConfig = {
   },
   // Configuration pour Docker
   output: 'standalone',
-  experimental: {
-    outputFileTracingRoot: undefined,
-  },
   // Configuration pour la production
   env: {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
