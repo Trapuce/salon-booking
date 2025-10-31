@@ -1,35 +1,51 @@
+
 services:
   salon-booking:
     build: .
     container_name: salon-booking
     restart: unless-stopped
+    
     environment:
       - NODE_ENV=production
       - DATABASE_URL=file:/app/data/prod.db
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-salon2024}
       - RESEND_API_KEY=${RESEND_API_KEY:-demo-key}
       - NEXT_PUBLIC_APP_URL=https://barber-time.trapuce.tech
+    
     volumes:
       - salon-data:/app/data
       - ./logs:/app/logs
+    
     labels:
       - "traefik.enable=true"
+      # Configuration HTTP (redirection vers HTTPS)
+      - "traefik.http.routers.salon-booking-http.rule=Host(`barber-time.trapuce.tech`)"
+      - "traefik.http.routers.salon-booking-http.entrypoints=web"
+      - "traefik.http.routers.salon-booking-http.middlewares=redirect-to-https"
+      # Configuration HTTPS
       - "traefik.http.routers.salon-booking.rule=Host(`barber-time.trapuce.tech`)"
       - "traefik.http.routers.salon-booking.entrypoints=websecure"
+      - "traefik.http.routers.salon-booking.tls=true"
       - "traefik.http.routers.salon-booking.tls.certresolver=myresolver"
+      # Configuration du service
       - "traefik.http.services.salon-booking.loadbalancer.server.port=3000"
-      - "traefik.docker.network=web"
+      # Middleware de redirection HTTPS
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+    
     networks:
       - web
+    
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/appointments',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
 volumes:
   salon-data:
+    driver: local
 
 networks:
   web:
