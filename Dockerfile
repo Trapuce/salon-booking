@@ -45,20 +45,19 @@ RUN addgroup --system --gid 1001 nodejs && \
 RUN mkdir -p /app/data && \
     chown -R nextjs:nodejs /app/data
 
-# Copier package.json pour avoir accès aux scripts npm
+# Copier package.json et prisma schema
 COPY --from=builder --chown=nextjs:nodejs /app/package*.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
-# Copier les fichiers de l'application
+# Installer UNIQUEMENT les dépendances de production + Prisma CLI
+RUN npm install --omit=dev && \
+    npm install -D prisma && \
+    npx prisma generate
+
+# Copier les fichiers de l'application Next.js
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-
-# Copier TOUS les node_modules nécessaires depuis le builder
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin ./node_modules/.bin
 
 USER nextjs
 
