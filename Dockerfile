@@ -52,7 +52,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 # Installer UNIQUEMENT les dépendances de production + Prisma CLI
 RUN npm install --omit=dev && \
     npm install -D prisma && \
-    npx prisma generate
+    npx prisma generate && \
+    chown -R nextjs:nodejs /app
 
 # Copier les fichiers de l'application Next.js
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
