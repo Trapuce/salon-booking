@@ -1,71 +1,68 @@
-# Dockerfile pour Salon Élégance
+# Stage 1: Base
 FROM node:20-alpine AS base
-
-# Installer les dépendances nécessaires
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
-# Étape de gestion des dépendances
+# Stage 2: Dependencies
 FROM base AS deps
 WORKDIR /app
 
 # Copier les fichiers de dépendances
-COPY package*.json ./
+COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
 # Installer les dépendances
 RUN npm ci
 
-# Étape de build
+# Stage 3: Builder
 FROM base AS builder
 WORKDIR /app
 
-# Copier les dépendances depuis l'étape deps
+# Copier les dépendances depuis deps
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /root/.npm /root/.npm
+
+# Copier tout le code source
 COPY . .
+
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Générer le client Prisma
 RUN npx prisma generate
 
-# Build Next.js avec output standalone
+# Build Next.js
 RUN npm run build
 
-# Image de production
+# Stage 4: Runner (Production)
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Créer un utilisateur non-root
+# Créer utilisateur non-root
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Créer les dossiers nécessaires avec les bonnes permissions
-RUN mkdir -p /app/data && \
-    chown -R nextjs:nodejs /app/data
+# Copier les fichiers publics
+COPY --from=builder /app/public ./public
 
-# Copier package.json et prisma schema
-COPY --from=builder --chown=nextjs:nodejs /app/package*.json ./
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# Créer le dossier .next avec les bonnes permissions
+RUN mkdir .next && \
+    chown nextjs:nodejs .next
 
-# Installer UNIQUEMENT les dépendances de production + Prisma CLI
-RUN npm install --omit=dev && \
-    npm install -D prisma && \
-    npx prisma generate && \
-    chown -R nextjs:nodejs /app
-
-# Copier les fichiers de l'application Next.js
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# Copier les fichiers standalone de Next.js
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-USER nextjs
+# Copier Prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 
-EXPOSE 3000
+# Copier package.json pour les scripts
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-# Démarrage direct
+# Démarrer le serveur
 CMD ["node", "server.js"]
