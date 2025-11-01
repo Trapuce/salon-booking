@@ -46,6 +46,9 @@ ADMIN_PASSWORD=VotreMotDePasseSecurise123!
 RESEND_API_KEY=re_xxxxxxxxxx
 EOF
 
+# IMPORTANT: Changez ADMIN_PASSWORD par un mot de passe fort !
+# C'est ce mot de passe qui protège votre interface admin
+
 # Sécuriser le fichier
 chmod 600 .env
 ```
@@ -75,6 +78,7 @@ curl https://barber-time.trapuce.tech/api/appointments
 # Accéder à l'application
 # Frontend: https://barber-time.trapuce.tech
 # Admin: https://barber-time.trapuce.tech/admin
+# Identifiants admin: admin / [votre ADMIN_PASSWORD dans .env]
 ```
 
 ## Maintenance

@@ -1,21 +1,17 @@
 import { BookingForm } from "@/components/booking-form"
 import { BookingQRCode } from "@/components/qr-code"
 import { Scissors } from "lucide-react"
-import Link from "next/link"
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-2">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center gap-2 justify-center">
             <Scissors className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-semibold text-foreground">Salon Élégance</h1>
           </div>
-          <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Admin
-          </Link>
         </div>
       </header>
 
