@@ -71,10 +71,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 # Copier lib pour les utilitaires
 COPY --from=builder --chown=nextjs:nodejs /app/lib ./lib
 
-# Script de démarrage
-COPY --chown=nextjs:nodejs scripts/docker-start.sh /app/docker-start.sh
-RUN chmod +x /app/docker-start.sh
-
 USER nextjs
 
 EXPOSE 3000
@@ -86,5 +82,5 @@ ENV HOSTNAME="0.0.0.0"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/api/appointments', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
-# Démarrer avec le script
-CMD ["/app/docker-start.sh"]
+# Démarrer directement Node.js
+CMD ["node", "server.js"]

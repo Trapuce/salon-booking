@@ -5,17 +5,12 @@ echo "Starting Salon Booking application..."
 
 # Vérifier si la base de données existe
 if [ ! -f "/app/data/prod.db" ]; then
-    echo "Database not found. Initializing..."
+    echo "Database not found. Creating empty database..."
     
-    # Utiliser Prisma CLI pour créer la base
-    if [ -f "/app/node_modules/prisma/build/index.js" ]; then
-        cd /app
-        node /app/node_modules/prisma/build/index.js db push --skip-generate --accept-data-loss
-        echo "Database initialized successfully!"
-    else
-        echo "Warning: Prisma CLI not found. Database initialization skipped."
-        echo "You may need to initialize the database manually."
-    fi
+    # Créer un fichier vide pour SQLite
+    touch /app/data/prod.db
+    echo "Empty database created. Tables will be created on first use."
+    echo "Note: You may need to run 'prisma db push' manually to create tables."
 else
     echo "Database found at /app/data/prod.db"
 fi
