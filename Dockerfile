@@ -44,6 +44,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
+# Créer les dossiers nécessaires
+RUN mkdir -p /app/data && \
+    chown -R nextjs:nodejs /app
+
 # Copier les fichiers publics
 COPY --from=builder /app/public ./public
 
@@ -64,5 +68,23 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_module
 # Copier package.json pour les scripts
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
-# Démarrer le serveur
-CMD ["node", "server.js"]
+# Copier lib pour les utilitaires
+COPY --from=builder --chown=nextjs:nodejs /app/lib ./lib
+
+# Script de démarrage
+COPY --chown=nextjs:nodejs scripts/docker-start.sh /app/docker-start.sh
+RUN chmod +x /app/docker-start.sh
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/api/appointments', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+
+# Démarrer avec le script
+CMD ["/app/docker-start.sh"]

@@ -1,7 +1,10 @@
 
 services:
   salon-booking:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: salon-booking:latest
     container_name: salon-booking
     restart: unless-stopped
     
@@ -18,30 +21,31 @@ services:
     
     labels:
       - "traefik.enable=true"
-      # Configuration HTTP (redirection vers HTTPS)
-      - "traefik.http.routers.salon-booking-http.rule=Host(`barber-time.trapuce.tech`)"
-      - "traefik.http.routers.salon-booking-http.entrypoints=web"
-      - "traefik.http.routers.salon-booking-http.middlewares=redirect-to-https"
-      # Configuration HTTPS
+      - "traefik.docker.network=web"
+      # Router HTTPS principal
       - "traefik.http.routers.salon-booking.rule=Host(`barber-time.trapuce.tech`)"
       - "traefik.http.routers.salon-booking.entrypoints=websecure"
       - "traefik.http.routers.salon-booking.tls=true"
       - "traefik.http.routers.salon-booking.tls.certresolver=myresolver"
-      # Configuration du service
+      - "traefik.http.routers.salon-booking.service=salon-booking"
+      # Service
       - "traefik.http.services.salon-booking.loadbalancer.server.port=3000"
-      # Middleware de redirection HTTPS
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+      # Redirection HTTP vers HTTPS
+      - "traefik.http.routers.salon-booking-http.rule=Host(`barber-time.trapuce.tech`)"
+      - "traefik.http.routers.salon-booking-http.entrypoints=web"
+      - "traefik.http.routers.salon-booking-http.middlewares=https-redirect"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
     
     networks:
       - web
     
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
 
 volumes:
   salon-data:
