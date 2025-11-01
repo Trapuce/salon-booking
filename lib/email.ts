@@ -88,7 +88,7 @@ export async function sendBookingConfirmationEmail(data: EmailData) {
     `
 
     const result = await resend.emails.send({
-      from: 'Salon Élégance <noreply@salon-elegance.fr>',
+      from: 'Salon Élégance <onboarding@resend.dev>',
       to: [to],
       subject: `Confirmation de réservation - ${formattedDate} à ${appointmentTime}`,
       html: emailHtml,
@@ -168,7 +168,7 @@ export async function sendBookingReminderEmail(data: EmailData) {
     `
 
     const result = await resend.emails.send({
-      from: 'Salon Élégance <noreply@salon-elegance.fr>',
+      from: 'Salon Élégance <onboarding@resend.dev>',
       to: [to],
       subject: `Rappel de rendez-vous - Demain ${formattedDate} à ${appointmentTime}`,
       html: emailHtml,

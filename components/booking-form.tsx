@@ -76,56 +76,110 @@ export function BookingForm() {
   // Success confirmation
   if (success) {
     return (
-      <Card className="mx-auto max-w-2xl">
+      <Card className="mx-auto max-w-2xl" id="booking-confirmation">
         <CardContent className="pt-8 pb-8 px-4 sm:pt-12 sm:pb-12 sm:px-6 text-center">
           <CheckCircle2 className="mx-auto mb-4 sm:mb-6 h-12 w-12 sm:h-16 sm:w-16 text-primary" />
           <h3 className="mb-3 sm:mb-4 text-xl sm:text-2xl font-bold text-foreground">Réservation confirmée !</h3>
           <p className="mb-2 text-sm sm:text-base text-muted-foreground">
             Votre rendez-vous a été enregistré avec succès.
           </p>
-          <div className="mb-6 sm:mb-8 text-xs sm:text-sm text-muted-foreground">
-            <p className="mb-2">Notifications envoyées :</p>
+          
+          {/* Booking details card - printable */}
+          <div className="rounded-lg border-2 border-primary bg-background p-6 sm:p-8 mb-6 sm:mb-8 shadow-lg print:shadow-none">
+            <h4 className="text-lg sm:text-xl font-bold text-primary mb-4">CONFIRMATION DE RENDEZ-VOUS</h4>
+            <div className="space-y-3 text-left">
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">Client :</span>
+                <span className="font-semibold">{name}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">Date :</span>
+                <span className="font-semibold">
+                  {selectedTime?.toLocaleDateString("fr-FR", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground">Heure :</span>
+                <span className="font-semibold">
+                  {selectedTime?.toLocaleTimeString("fr-FR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-muted-foreground">Référence :</span>
+                <span className="font-mono text-sm">{`RDV-${Date.now().toString(36).toUpperCase()}`}</span>
+              </div>
+            </div>
+            <div className="mt-6 pt-4 border-t text-center text-sm text-muted-foreground">
+              <p className="font-semibold mb-1">Salon Élégance</p>
+              <p>Tél : 01 23 45 67 89</p>
+              <p>Merci de présenter cette confirmation lors de votre visite</p>
+            </div>
+          </div>
+
+          {/* Notification status */}
+          <div className="mb-6 text-xs sm:text-sm text-muted-foreground">
             <div className="flex flex-col gap-1">
-              {notifications.email && (
-                <p className="flex items-center gap-2">
+              {notifications.email ? (
+                <p className="flex items-center justify-center gap-2">
                   <span className="text-green-600">✓</span>
-                  Email de confirmation envoyé à <strong className="break-all">{email}</strong>
+                  Email de confirmation envoyé
                 </p>
-              )}
-              {notifications.sms && phone && (
-                <p className="flex items-center gap-2">
-                  <span className="text-green-600">✓</span>
-                  SMS de confirmation envoyé au <strong>{phone}</strong>
-                </p>
-              )}
-              {!notifications.email && !notifications.sms && (
+              ) : (
                 <p className="text-orange-600">
-                  Aucune notification envoyée (vérifiez votre connexion)
+                  Email non envoyé - Configurez Resend API
+                </p>
+              )}
+              {phone && notifications.sms && (
+                <p className="flex items-center justify-center gap-2">
+                  <span className="text-green-600">✓</span>
+                  SMS de confirmation envoyé
                 </p>
               )}
             </div>
           </div>
-          <div className="rounded-lg bg-secondary p-4 sm:p-6 mb-6 sm:mb-8">
-            <p className="text-xs sm:text-sm text-muted-foreground mb-2">Détails du rendez-vous</p>
-            <p className="font-semibold text-sm sm:text-base text-foreground">{name}</p>
-            <p className="text-sm sm:text-base text-foreground">
-              {selectedTime?.toLocaleDateString("fr-FR", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </p>
-            <p className="text-sm sm:text-base text-foreground">
-              {selectedTime?.toLocaleTimeString("fr-FR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
+
+          {/* Action buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button 
+              onClick={() => window.print()} 
+              variant="outline" 
+              className="w-full sm:w-auto"
+            >
+              Imprimer la confirmation
+            </Button>
+            <Button onClick={resetForm} size="lg" className="w-full sm:w-auto">
+              Nouvelle réservation
+            </Button>
           </div>
-          <Button onClick={resetForm} size="lg" className="w-full sm:w-auto">
-            Nouvelle réservation
-          </Button>
+
+          {/* Print styles */}
+          <style jsx>{`
+            @media print {
+              body * {
+                visibility: hidden;
+              }
+              #booking-confirmation, #booking-confirmation * {
+                visibility: visible;
+              }
+              #booking-confirmation {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+              }
+              button {
+                display: none !important;
+              }
+            }
+          `}</style>
         </CardContent>
       </Card>
     )
